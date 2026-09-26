@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORTEX — grow the agent</title>
+<style>
+ :root{--bg:#070a12;--panel:#0d1322;--ink:#e6edf7;--dim:#8fa3c8;--teal:#39e0c8;
+  --gold:#ffd479;--green:#7dffa8;--pur:#c084fc;--red:#ff6b7d;--line:#233050;--blue:#69b7ff}
+ *{box-sizing:border-box}
+ body{margin:0;background:radial-gradient(1100px 560px at 50% -8%,#101b33 0%,var(--bg) 62%);
+  color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;
+  display:flex;flex-direction:column;align-items:center;padding:20px 14px 40px;gap:14px}
+ #app{width:100%;max-width:680px;display:flex;flex-direction:column;gap:14px}
+ header{text-align:center}
+ h1{margin:0;font-size:34px;letter-spacing:12px;color:var(--teal)}
+ .badge{display:inline-block;font-size:10px;letter-spacing:2px;padding:3px 9px;border-radius:20px;
+  border:1px solid var(--gold);color:var(--gold);margin-left:8px;vertical-align:middle}
+ .tag{color:var(--dim);font-size:12px;letter-spacing:1px;margin-top:6px}
+ .meter{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+ .meter .top{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px}
+ .meter .top b{color:var(--ink);font-weight:normal}
+ .bar{height:14px;background:#0a0f1c;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+ .bar>div{height:100%;width:0%;transition:width .25s ease,background .25s}
+ #statline{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+ #statline b{color:var(--ink);font-weight:normal}
+ #core{width:100%;max-width:680px;height:150px;display:block}
+ #phase{min-height:190px}
+ .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+  width:190px;cursor:pointer;transition:.12s;position:relative}
+ .card:hover{border-color:var(--teal);transform:translateY(-3px)}
+ .card .nm{font-size:15px;letter-spacing:1px;margin-bottom:8px}
+ .card .ic{font-size:20px;margin-bottom:6px}
+ .kv{font-size:11px;color:var(--dim);display:flex;justify-content:space-between;margin:3px 0}
+ .kv b{color:var(--ink);font-weight:normal}
+ .cost{color:var(--teal)} .load{color:var(--gold)} .rew{color:var(--green)} .risk{color:var(--red)}
+ .card .fam{font-size:10px;letter-spacing:1px;color:var(--dim)}
+ .modcard .desc{font-size:11px;color:var(--dim);line-height:1.5;margin-top:4px}
+ .modcard .tag2{position:absolute;top:10px;right:10px;font-size:9px;letter-spacing:1px;
+  padding:2px 7px;border-radius:10px;border:1px solid var(--pur);color:var(--pur)}
+ .prompt{text-align:center;color:var(--gold);font-size:13px;letter-spacing:2px;margin-bottom:12px}
+ #modules{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:24px}
+ .chip{font-size:10px;letter-spacing:1px;padding:4px 10px;border-radius:20px;border:1px solid var(--blue);color:var(--blue)}
+ #log{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;
+  font-size:11px;line-height:1.7;color:var(--dim);height:84px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+ #log .ev{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #log .good{color:var(--green)} #log .bad{color:var(--red)} #log .info{color:var(--teal)}
+ button{background:#13203a;border:1px solid #2c4370;color:var(--ink);padding:11px 26px;border-radius:10px;
+  font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer}
+ button:hover{border-color:var(--teal);color:var(--teal)}
+ .center{text-align:center}
+ .end-title{font-size:26px;letter-spacing:6px;margin-bottom:8px}
+ .end-sub{font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:6px}
+ .big{font-size:20px;color:var(--ink)}
+ #foot{text-align:center;font-size:11px;color:#5b6b8a;line-height:1.7}
+ #foot b{color:var(--dim);font-weight:normal}
+ .pay{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;font-size:12px;line-height:1.9;color:var(--dim)}
+ .pay b{color:var(--gold);font-weight:normal}
+ .pay code{background:#0a0f1c;border:1px solid #22304a;border-radius:4px;padding:1px 6px;font-size:11px;color:#9fd6ff;word-break:break-all}
+ @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+ .fine{color:#44506b;font-size:11px;text-align:center;line-height:1.7;max-width:640px}
+</style></head><body>
+<div id="app">
+ <header>
+  <h1>CORTEX<span class="badge" id="badge" style="display:none">DEMO</span></h1>
+  <div class="tag">GROW THE AGENT &middot; MANAGE TOKENS &amp; CONTEXT &middot; ATTACH SKILLS &amp; MCPs</div>
+ </header>
+ <div class="meter"><div class="top"><span>TOKENS &middot; fuel</span><span><b id="valTokens">0</b> / <span id="maxTokens">0</span></span></div>
+  <div class="bar"><div id="barTokens"></div></div></div>
+ <div class="meter"><div class="top"><span>CONTEXT &middot; window</span><span><b id="valCtx">0</b> / <span id="maxCtx">0</span></span></div>
+  <div class="bar"><div id="barCtx"></div></div></div>
+ <div id="statline">
+  <span>LVL <b id="lvl">1</b></span><span>TASK <b id="task">0</b></span>
+  <span>SCORE <b id="score">0</b></span><span>MODULES <b id="mods">0</b></span><span>LIVES <b id="lives">1</b></span>
+ </div>
+ <canvas id="core" width="680" height="150"></canvas>
+ <div id="phase"></div>
+ <div id="modules"></div>
+ <div id="log"></div>
+ <div id="foot">PICK A TASK with click or keys 1&ndash;3 &middot; each task spends <b>tokens</b> and fills the <b>context window</b>.<br>
+  When tokens hit 0 or the window overflows, the agent reboots. Attach modules to get stronger. Built autonomously by <b>Poiesis</b>.</div>
+</div>
+<script>
+"use strict";
+const DEMO=true;
+document.getElementById('badge').style.display=DEMO?'inline-block':'none';
+const $=id=>document.getElementById(id);
+// ---------- data ----------
+const TASKS=[
+ {t:'Query',   ic:'?',  cost:8,  load:10, reward:0,  score:8,  fam:'routine'},
+ {t:'Code',    ic:'{}', cost:14, load:12, reward:4,  score:15, fam:'build'},
+ {t:'Research',ic:'⌕',  cost:10, load:20, reward:2,  score:15, fam:'deep'},
+ {t:'Batch',   ic:'▦',  cost:22, load:8,  reward:8,  score:18, fam:'heavy'},
+ {t:'Draft',   ic:'✎',  cost:12, load:10, reward:12, score:20, fam:'create'},
+ {t:'Debug',   ic:'✕',  cost:20, load:16, reward:8,  score:26, risk:.3, fam:'risky'}
+];
+const BOSSES={
+ 5:{name:'The Compiler',     ic:'⚙', cost:30, load:16, reward:26, score:60,  note:'token-hungry'},
+ 9:{name:'The Context Wall', ic:'▤', cost:14, load:34, reward:22, score:70,  note:'context-hungry'},
+ 12:{name:'The Hallucination',ic:'◍',cost:28, load:30, reward:34, score:90,  risk:.35, note:'35%: load doubles'},
+ 15:{name:'The Grand Task',  ic:'★', cost:40, load:40, reward:50, score:150, final:true, note:'clear it to win'}
+};
+const UPGRADES=[
+ // skills (intrinsic)
+ {id:'efficient', nm:'Efficient Prompting', ic:'✂', type:'skill', ga:'TOKENS',  desc:'Tasks cost 15% fewer tokens.', fx:m=>{m.tokenMult*= .85}},
+ {id:'longctx',   nm:'Long-Context Model',  ic:'▤', type:'skill', ga:'CONTEXT', desc:'+100 context window.',        fx:m=>{m.windowBonus+=100}},
+ {id:'kv',        nm:'KV-Cache Compression',ic:'⛃', type:'skill', ga:'CONTEXT', desc:'Context fills 25% slower.',   fx:m=>{m.contextMult*= .75}},
+ {id:'compact',   nm:'Auto-Compactor',      ic:'⟲', type:'skill', ga:'CONTEXT', desc:'After each task, context −15%.',fx:m=>{m.compactPct=Math.max(m.compactPct,.15)}},
+ {id:'recycle',   nm:'Token Recycling',     ic:'♻', type:'skill', ga:'TOKENS',  desc:'Refund 25% of each task as tokens.',fx:m=>{m.refundPct=Math.max(m.refundPct,.25)}},
+ {id:'overclock', nm:'Overclock',           ic:'⚡', type:'skill', ga:'RISK',    desc:'2× score, but tasks cost +25% tokens.',fx:m=>{m.scoreMult*=2;m.tokenMult*=1.25}},
+ {id:'focus',     nm:'Focus Protocol',      ic:'◎', type:'skill', ga:'DEFENSE', desc:'Bosses punish 20% less.',       fx:m=>{m.bossResist=Math.max(m.bossResist,.2)}},
+ {id:'checkpoint',nm:'Checkpoint',          ic:'⚑', type:'skill', ga:'LIVES',   desc:'Absorb one crash (reset context).',fx:m=>{m.lives+=1}},
+ // MCPs (attached tools)
+ {id:'payment',   nm:'Payment Gateway',     ic:'$', type:'mcp', ga:'TOKENS',    desc:'+4 tokens every task.',          fx:m=>{m.incomePerTask+=4}},
+ {id:'memorybank',nm:'Memory Bank',         ic:'▥', type:'mcp', ga:'CONTEXT',   desc:'+150 context window.',           fx:m=>{m.windowBonus+=150}},
+ {id:'summarizer',nm:'Summarizer',          ic:'≡', type:'mcp', ga:'CONTEXT',   desc:'Every 2 tasks, context −12%.',   fx:m=>{m.compactEvery=2;m.compactPct=Math.max(m.compactPct,.12)}},
+ {id:'subagent',  nm:'Sub-Agent',           ic:'⿻', type:'mcp', ga:'CONTEXT',   desc:'Context fills 40% slower.',      fx:m=>{m.contextMult*=.6}},
+ {id:'billing',   nm:'Billing',             ic:'⇄', type:'mcp', ga:'TOKENS',    desc:'+7 tokens every task.',          fx:m=>{m.incomePerTask+=7}},
+ {id:'guard',     nm:'Guard',               ic:'⛨', type:'mcp', ga:'LIVES',     desc:'One-time overflow shield.',      fx:m=>{m.shield+=1}},
+ {id:'cache',     nm:'Caching',             ic:'⧉', type:'mcp', ga:'CONTEXT',   desc:'Repeating a task type costs 0 context.',fx:m=>{m.cacheRepeat=true}},
+ {id:'specialist',nm:'Specialist',          ic:'✦', type:'mcp', ga:'SCORE',     desc:'+50% score on every task.',      fx:m=>{m.scoreMult*=1.5}}
+];
+const DEMO_POOL=UPGRADES.filter(u=>['efficient','longctx','kv','compact','recycle','overclock','payment','memorybank','summarizer','guard'].includes(u.id));
+const POOL=DEMO?DEMO_POOL:UPGRADES;
+const MAXWAVE=DEMO?15:999;
+// ---------- state ----------
+function freshMods(){return{tokenMult:1,contextMult:1,refundPct:0,incomePerTask:0,compactPct:0,compactEvery:0,windowBonus:0,scoreMult:1,bossResist:0,lives:1,shield:0,cacheRepeat:false}}
+let S;
+function newRun(){
+ S={tokens:100,tokensMax:100,context:0,contextMax:100,level:1,tasks:0,score:0,wave:1,
+    phase:'intro',mods:freshMods(),owned:{},lastType:null,lives:1,over:null,
+    parts:[],shake:0,flash:0,flashCol:'#fff',runT:0};
+ S.contextMax=100+S.mods.windowBonus;
+}
+// ---------- audio ----------
+let AC=null;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}return AC}
+function beep(f,d,type,g,slide){try{const a=ac();if(!a)return;const o=a.createOscillator(),gn=a.createGain();
+ o.type=type||'triangle';o.frequency.setValueAtTime(f,a.currentTime);
+ if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d);
+ gn.gain.setValueAtTime(g||.05,a.currentTime);gn.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);
+ o.connect(gn).connect(a.destination);o.start();o.stop(a.currentTime+d)}catch(e){}}
+const seq=(notes,gap)=>notes.forEach((f,i)=>setTimeout(()=>beep(f,.12,'triangle',.05),i*gap));
+const snd={
+ task:()=>beep(520,.08,'triangle',.05),
+ ok:()=>seq([660,880],55),
+ level:()=>seq([523,659,784],70),
+ upg:()=>seq([440,660],60),
+ boss:()=>seq([392,494,587,784],70),
+ over:()=>{beep(300,.4,'sawtooth',.08,90);setTimeout(()=>beep(150,.6,'sawtooth',.07,60),160)},
+ win:()=>seq([523,659,784,1046,1318],100)
+};
+let best=+(localStorage.getItem('cortex_best')||0);
+// ---------- core loop ----------
+function scaled(base,wave){return Math.round(base*(1+wave*.05))}
+function genWave(){
+ const b=BOSSES[S.wave];
+ const cards=[];
+ if(b){cards.push(Object.assign({boss:true,final:!!b.final},b))}
+ const pool=TASKS.slice();
+ while(cards.length<3&&pool.length){
+  const i=(Math.random()*pool.length)|0;
+  const t=pool.splice(i,1)[0];
+  cards.push({t:t.t,ic:t.ic,fam:t.fam,boss:false,
+   cost:scaled(t.cost,S.wave),load:scaled(t.load,S.wave),
+   reward:scaled(t.reward,S.wave),score:scaled(t.score,S.wave)});
+ }
+ // scale boss too
+ if(b){cards[0].cost=scaled(b.cost,S.wave);cards[0].load=scaled(b.load,S.wave);
+  cards[0].reward=scaled(b.reward,S.wave);cards[0].score=scaled(b.score,S.wave)}
+ S.cards=cards;
+ // fuel-death: if no task is affordable, the agent is out of fuel
+ if(S.phase!=='over'&&!S.cards.some(c=>S.tokens>=Math.round(c.cost*S.mods.tokenMult))){
+  gameOver('Out of tokens — no affordable task left.');}
+}
+function runTask(c){
+ const m=S.mods;
+ let cost=Math.round(c.cost*m.tokenMult);
+ let load=Math.round(c.load*m.contextMult);
+ // caching: repeating a type costs 0 context
+ if(m.cacheRepeat&&S.lastType&&S.lastType===c.fam)load=0;
+ // hallucination risk
+ if(c.risk&&Math.random()<c.risk){load*=2;flash(.4,'#ff6b7d');log('the task hallucinated — load doubled!','bad')}
+ if(c.boss)load=Math.round(load*(1-m.bossResist));
+ if(S.tokens<cost){log('not enough tokens to run “'+(c.boss?c.name:c.t)+'”','bad');beep(180,.2,'sawtooth',.06);return}
+ S.tokens-=cost;
+ S.context+=load;
+ const refund=Math.round(cost*m.refundPct);
+ S.tokens+=c.reward+refund+m.incomePerTask;
+ let gain=Math.round(c.score*m.scoreMult);
+ S.score+=gain;S.tasks++;S.lastType=c.fam;
+ // compactor
+ if(m.compactPct)S.context=Math.max(0,S.context*(1-m.compactPct));
+ if(m.compactEvery&&S.tasks%m.compactEvery===0)S.context=Math.max(0,S.context*(1-m.compactPct));
+ S.contextMax=100+S.mods.windowBonus;
+ // juice
+ if(c.boss){S.shake=10;boom(c.final?'#ffd479':'#39e0c8',34);snd.boss()}
+ else{S.shake=3;boom('#69b7ff',14);snd.task()}
+ log((c.boss?'BOSS “'+c.name+'”':'task “'+c.t+'”')+'  −'+cost+' tok · +'+load+' ctx · +'+(c.reward+refund)+' tok · +'+gain+' score', c.boss?'info':'good');
+ // game over?
+ if(S.context>=S.contextMax){
+  if(m.shield>0){m.shield--;S.context=0;flash(.5,'#39e0c8');log('GUARD absorbed the overflow!','info');snd.level()}
+  else return gameOver('Context Overflow — the window is full.');
+ }
+ if(S.tokens<=0){
+  if(m.lives>1){m.lives--;S.lives=m.lives;S.tokens=Math.round(S.tokensMax*.5);S.context=0;flash(.5,'#ffd479');log('CHECKPOINT — reboots with half tokens','info');snd.level()}
+  else return gameOver('Out of tokens — the agent is out of fuel.');
+ }
+ // win?
+ if(c.final){return winRun()}
+ // level up every 3 tasks
+ if(S.tasks%3===0){S.level++;S.phase='upgrade';draft();snd.level();
+  log('level '+S.level+' — choose a module','info')}
+ else{S.wave++;if(S.wave>MAXWAVE){return winRun()}S.phase='task';genWave()}
+ render();
+}
+function draft(){
+ const avail=POOL.filter(u=>!(S.owned[u.id]&&u.noStack)&&(!u.noStack?true:(S.owned[u.id]||0)<(u.max||1)));
+ const picks=[];const bag=avail.slice();
+ while(picks.length<3&&bag.length)picks.push(bag.splice((Math.random()*bag.length)|0,1)[0]);
+ S.picks=picks;
+}
+function pickUpgrade(u){
+ if(!u)return;
+ u.fx(S.mods);
+ S.owned[u.id]=(S.owned[u.id]||0)+1;
+ S.contextMax=100+S.mods.windowBonus;
+ S.lives=S.mods.lives;
+ boom('#c084fc',22);flash(.3,'#c084fc');snd.upg();
+ log('attached '+u.type.toUpperCase()+' “'+u.nm+'”  — '+u.desc,'info');
+ S.wave++;if(S.wave>MAXWAVE){return winRun()}
+ S.phase='task';genWave();render();
+}
+function gameOver(reason){
+ S.phase='over';S.over=reason;S.runs++;
+ if(S.score>best){best=S.score;localStorage.setItem('cortex_best',best)}
+ S.shake=14;flash(1,'#ff6b7d');snd.over();
+ render();
+}
+function winRun(){
+ S.phase='win';S.runs++;
+ if(S.score>best){best=S.score;localStorage.setItem('cortex_best',best)}
+ boom('#ffd479',44);flash(1,'#ffd479');snd.win();
+ render();
+}
+function start(){ac();newRun();S.phase='task';S.wave=1;genWave();render();log('agent online — 100 tokens, empty context','info')}
+function boom(col,n){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=.6+Math.random()*3;
+ S.parts.push({x:W2/2,y:75,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,col})}}
+function log(t,cls){const e=document.createElement('div');e.className='ev '+(cls||'');e.textContent='> '+t;
+ const L=$('log');L.appendChild(e);while(L.children.length>6)L.removeChild(L.firstChild)}
+function flash(a,col){S.flash=a;S.flashCol=col}
+// ---------- render ----------
+const W2=680;
+function render(){
+ // meters
+ const tf=Math.max(0,S.tokens)/S.tokensMax, cf=Math.min(1,S.context/S.contextMax);
+ $('barTokens').style.width=(tf*100)+'%';
+ $('barTokens').style.background=tf<.25?'#ff6b7d':(tf<.5?'#ffd479':'#39e0c8');
+ $('barCtx').style.width=(cf*100)+'%';
+ $('barCtx').style.background=cf>.9?'#ff6b7d':(cf>.7?'#ffd479':'#c084fc');
+ $('barCtx').style.animation=cf>.9?'pulse .5s infinite':'none';
+ $('valTokens').textContent=Math.max(0,Math.round(S.tokens));$('maxTokens').textContent=S.tokensMax;
+ $('valCtx').textContent=Math.round(S.context);$('maxCtx').textContent=S.contextMax;
+ $('lvl').textContent=S.level;$('task').textContent=Math.min(S.wave,MAXWAVE);
+ $('score').textContent=S.score;$('mods').textContent=Object.keys(S.owned).length;$('lives').textContent=S.lives;
+ // modules chips
+ const M=$('modules');M.innerHTML='';
+ for(const id in S.owned){const u=POOL.find(z=>z.id===id);if(!u)continue;
+  const c=document.createElement('span');c.className='chip';
+  c.textContent=u.ic+' '+u.nm+(S.owned[id]>1?' ×'+S.owned[id]:'');M.appendChild(c)}
+ // phase
+ const P=$('phase');P.innerHTML='';
+ if(S.phase==='intro'){
+  P.innerHTML='<div class="center" style="padding:14px 0"><div class="end-title" style="color:var(--teal)">GROW THE AGENT</div>'+
+   '<div class="end-sub">Manage two meters: <b style="color:var(--teal)">tokens</b> (fuel) and the <b style="color:var(--pur)">context window</b>.<br>'+
+   'Each task spends tokens and fills the window. Run out of fuel or overflow the window and the agent reboots.<br>'+
+   'Draft <b style="color:var(--blue)">skills & MCPs</b> to get stronger. Reach the <b style="color:var(--gold)">Grand Task</b> to win.</div>'+
+   '<button onclick="start()">START RUN</button></div>';
+ }
+ else if(S.phase==='task'){
+  const row=document.createElement('div');row.className='row';
+  S.cards.forEach((c,i)=>{
+   const d=document.createElement('div');d.className='card'+(c.boss?' boss':'');
+   d.style.borderColor=c.boss?'var(--gold)':'var(--line)';
+   let html='<div class="ic">'+c.ic+'</div><div class="nm" style="color:'+(c.boss?'var(--gold)':'var(--ink)')+'">'+(c.boss?'★ ':c.t)+(c.final?' — GRAND TASK':'')+'</div>';
+   if(c.boss)html+='<div class="fam" style="color:var(--gold)">'+c.note+'</div>';
+   html+='<div class="kv"><span class="cost">−tokens</span><b>'+Math.round(c.cost*S.mods.tokenMult)+'</b></div>';
+   let load=Math.round(c.load*S.mods.contextMult);
+   if(S.lastType&&S.lastType===c.fam&&S.mods.cacheRepeat)load=0;
+   if(c.boss)load=Math.round(load*(1-S.mods.bossResist));
+   html+='<div class="kv"><span class="load">+context</span><b style="color:'+(load>=40?'var(--red)':'var(--gold)')+'">'+load+'</b></div>';
+   html+='<div class="kv"><span class="rew">+tokens</span><b>'+(c.reward)+'</b></div>';
+   html+='<div class="kv"><span style="color:var(--dim)">score</span><b style="color:var(--green)">+'+Math.round(c.score*S.mods.scoreMult)+'</b></div>';
+   html+='<div class="fam" style="margin-top:6px">key '+(i+1)+'</div>';
+   d.innerHTML=html;
+   d.onclick=()=>runTask(c);
+   d.dataset.i=i;
+   row.appendChild(d);
+  });
+  P.appendChild(row);
+ }
+ else if(S.phase==='upgrade'){
+  P.innerHTML='<div class="prompt">LEVEL '+S.level+' — ATTACH A MODULE</div>';
+  const row=document.createElement('div');row.className='row';
+  S.picks.forEach((u,i)=>{
+   const d=document.createElement('div');d.className='card modcard';
+   d.innerHTML='<span class="tag2">'+u.type.toUpperCase()+'</span><div class="ic" style="color:'+(u.type==='mcp'?'var(--blue)':'var(--pur)')+'">'+u.ic+'</div>'+
+    '<div class="nm">'+u.nm+'</div><div class="fam" style="color:var(--dim)">'+u.ga+'</div>'+
+    '<div class="desc">'+u.desc+'</div><div class="fam" style="margin-top:8px">key '+(i+1)+'</div>';
+   d.onclick=()=>pickUpgrade(u);d.dataset.i=i;
+   row.appendChild(d);
+  });
+  P.appendChild(row);
+ }
+ else if(S.phase==='over'){
+  P.innerHTML='<div class="center" style="padding:12px 0"><div class="end-title" style="color:var(--red)">REBOOT</div>'+
+   '<div class="end-sub">'+S.over+'</div><div class="big">score '+S.score+' &middot; level '+S.level+' &middot; wave '+Math.min(S.wave,MAXWAVE)+'</div>'+
+   '<div class="end-sub">best '+best+'</div><button onclick="start()">RUN AGAIN</button></div>';
+ }
+ else if(S.phase==='win'){
+  P.innerHTML='<div class="center" style="padding:12px 0"><div class="end-title" style="color:var(--gold)">AGENT ASCENDED</div>'+
+   '<div class="end-sub">You cleared the Grand Task with a fully-grown agent.</div><div class="big">score '+S.score+' &middot; level '+S.level+' &middot; '+Object.keys(S.owned).length+' modules</div>'+
+   '<div class="end-sub">best '+best+'</div><button onclick="start()">RUN AGAIN</button></div>';
+ }
+ drawCore();
+}
+// ---------- canvas core (the growing agent) ----------
+const cv=$('core'),x=cv.getContext('2d');
+const stars=[];for(let i=0;i<40;i++)stars.push({x:Math.random()*W2,y:Math.random()*150,s:Math.random()*1.4+.3,v:Math.random()*.3+.05});
+function drawCore(){
+ const w=cv.width,h=cv.height;
+ const sx=(Math.random()-.5)*(S.shake||0),sy=(Math.random()-.5)*(S.shake||0);
+ x.setTransform(1,0,0,1,sx,sy);
+ x.clearRect(-12,-12,w+24,h+24);
+ S.shake*=.85;if((S.shake||0)<.2)S.shake=0;
+ // stars
+ for(const s of stars){s.x+=s.v;if(s.x>w)s.x=0;
+  x.globalAlpha=.25;x.fillStyle='#8fa3c8';x.fillRect(s.x,s.y,s.s,s.s)}
+ x.globalAlpha=1;
+ const cx=w/2,cy=h/2;
+ // flash
+ if(S.flash>0){x.globalAlpha=S.flash*.5;x.fillStyle=S.flashCol;x.fillRect(0,0,w,h);x.globalAlpha=1;S.flash*=.85;if(S.flash<.02)S.flash=0}
+ const tf=Math.max(0,S.tokens)/S.tokensMax;
+ // orbit ring (context pressure)
+ const cf=Math.min(1,S.context/S.contextMax);
+ x.lineWidth=3;
+ x.strokeStyle=cf>.9?'#ff6b7d':(cf>.7?'#ffd479':'#233050');
+ x.beginPath();x.arc(cx,cy,52,0,6.283);x.stroke();
+ x.strokeStyle=cf>.7?'#ff6b7d':'#39e0c8';
+ x.beginPath();x.arc(cx,cy,52,-Math.PI/2,-Math.PI/2+cf*6.283);x.stroke();
+ // core orb (size grows with level, brightness with tokens)
+ const R=18+Math.min(26,S.level*2.2);
+ const g=x.createRadialGradient(cx,cy,2,cx,cy,R);
+ const col=tf<.25?'#ff6b7d':(tf<.5?'#ffd479':'#39e0c8');
+ g.addColorStop(0,'#ffffff');g.addColorStop(.3,col);g.addColorStop(1,'rgba(0,0,0,0)');
+ x.globalAlpha=.35+.65*tf;
+ x.fillStyle=g;x.beginPath();x.arc(cx,cy,R,0,6.283);x.fill();
+ x.globalAlpha=1;
+ x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,3,0,6.283);x.fill();
+ // module satellites (the growing constellation)
+ const mods=Object.keys(S.owned);
+ for(let i=0;i<mods.length;i++){
+  const a=S.runT*.01+i*(6.283/Math.max(1,mods.length));
+  const r=R+16+ (i%3)*10;
+  const mx=cx+Math.cos(a)*r,my=cy+Math.sin(a)*r*.7;
+  const u=POOL.find(z=>z.id===mods[i]);
+  const mc=u&&(u.type==='mcp'?'#69b7ff':'#c084fc');
+  x.strokeStyle='#233050';x.lineWidth=1;x.beginPath();x.moveTo(cx,cy);x.lineTo(mx,my);x.stroke();
+  x.fillStyle=mc;x.beginPath();x.arc(mx,my,4,0,6.283);x.fill();
+  x.globalAlpha=.4;x.beginPath();x.arc(mx,my,7,0,6.283);x.stroke();x.globalAlpha=1;
+ }
+ // particles
+ for(const p of S.parts){p.x+=p.vx;p.y+=p.vy;p.l-=.03;if(p.l>0){
+  x.globalAlpha=Math.max(0,p.l);x.fillStyle=p.col;x.fillRect(p.x-2,p.y-2,4,4)}}
+ x.globalAlpha=1;
+ S.parts=S.parts.filter(p=>p.l>0);
+}
+// ---------- loop ----------
+function loop(){if(S){S.runT++;if(S.phase!=='intro')drawCore();}requestAnimationFrame(loop)}
+// ---------- input ----------
+addEventListener('keydown',e=>{
+ if(!S)return;
+ if(S.phase==='intro'&&(e.key===' '||e.key==='Enter')){e.preventDefault();start();return}
+ if((S.phase==='over'||S.phase==='win')&&(e.key===' '||e.key==='Enter')){e.preventDefault();start();return}
+ const n=+e.key;
+ if(S.phase==='task'&&n>=1&&n<=S.cards.length)runTask(S.cards[n-1]);
+ if(S.phase==='upgrade'&&n>=1&&n<=S.picks.length)pickUpgrade(S.picks[n-1]);
+});
+newRun();
+render();
+loop();
+</script>
+</body></html>
