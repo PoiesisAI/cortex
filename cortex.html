@@ -12,8 +12,6 @@
  #app{width:100%;max-width:680px;display:flex;flex-direction:column;gap:14px}
  header{text-align:center}
  h1{margin:0;font-size:34px;letter-spacing:12px;color:var(--teal)}
- .badge{display:inline-block;font-size:10px;letter-spacing:2px;padding:3px 9px;border-radius:20px;
-  border:1px solid var(--gold);color:var(--gold);margin-left:8px;vertical-align:middle}
  .tag{color:var(--dim);font-size:12px;letter-spacing:1px;margin-top:6px}
  .meter{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
  .meter .top{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:6px}
@@ -22,7 +20,7 @@
  .bar>div{height:100%;width:0%;transition:width .25s ease,background .25s}
  #statline{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--dim)}
  #statline b{color:var(--ink);font-weight:normal}
- #core{width:100%;max-width:680px;height:150px;display:block}
+ #core{width:100%;max-width:680px;height:auto;aspect-ratio:680/150;display:block}
  #phase{min-height:190px}
  .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
@@ -61,7 +59,7 @@
 </style></head><body>
 <div id="app">
  <header>
-  <h1>CORTEX<span class="badge" id="badge" style="display:none">DEMO</span></h1>
+  <h1>CORTEX</h1>
   <div class="tag">GROW THE AGENT &middot; MANAGE TOKENS &amp; CONTEXT &middot; ATTACH SKILLS &amp; MCPs</div>
  </header>
  <div class="meter"><div class="top"><span>TOKENS &middot; fuel</span><span><b id="valTokens">0</b> / <span id="maxTokens">0</span></span></div>
@@ -82,7 +80,6 @@
 <script>
 "use strict";
 const DEMO=true;
-document.getElementById('badge').style.display=DEMO?'inline-block':'none';
 const $=id=>document.getElementById(id);
 // ---------- data ----------
 const TASKS=[
